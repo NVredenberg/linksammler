@@ -28,7 +28,6 @@
     </style>
 </head>
 <body>
-    <div id="linkContainer"></div>
     <div class="container-fluid">
         <div class="header-section">
             <h1>Linksammler</h1>
@@ -77,10 +76,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script>
-        // Array zum Speichern der Links
-        let links = [];
-        let linkIdCounter = 0;
-
         // Bildvorschau im Modal
         document.getElementById('cardImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -95,30 +90,43 @@
             }
         });
 
-        // Speichern-Button
-        document.getElementById('saveBtn').addEventListener('click', function() {
+        // Speichern-Button - sendet Daten an Backend
+        document.getElementById('saveBtn').addEventListener('click', async function() {
             const title = document.getElementById('cardTitle').value;
             const link = document.getElementById('cardLink').value;
             const imageFile = document.getElementById('cardImage').files[0];
 
             if (title && link && imageFile) {
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    const linkData = {
-                        id: linkIdCounter++,
-                        title: title,
-                        link: link,
-                        image: event.target.result
-                    };
-                    
-                    links.push(linkData);
-                    renderCards();
-                    
-                    // Modal schließen und Form zurücksetzen
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
-                    modal.hide();
-                    document.getElementById('linkForm').reset();
-                    document.getElementById('imagePreview').style.display = 'none';
+                reader.onload = async function(event) {
+                    try {
+                        // An Backend API senden
+                        const response = await fetch('/api/links', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: title,
+                                link: link,
+                                image: event.target.result
+                            })
+                        });
+
+                        if (response.ok) {
+                            // Modal schließen und Form zurücksetzen
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+                            modal.hide();
+                            document.getElementById('linkForm').reset();
+                            document.getElementById('imagePreview').style.display = 'none';
+                            
+                            // Karten neu laden
+                            loadLinks();
+                        } else {
+                            alert('Fehler beim Speichern!');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Fehler beim Speichern: ' + error.message);
+                    }
                 };
                 reader.readAsDataURL(imageFile);
             } else {
@@ -126,8 +134,19 @@
             }
         });
 
+        // Links vom Backend laden
+        async function loadLinks() {
+            try {
+                const response = await fetch('/api/links');
+                const links = await response.json();
+                renderCards(links);
+            } catch (error) {
+                console.error('Error loading links:', error);
+            }
+        }
+
         // Karten rendern
-        function renderCards() {
+        function renderCards(links) {
             const container = document.getElementById('cardContainer');
             container.innerHTML = '';
 
@@ -135,7 +154,7 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <img src="${linkData.image}" class="card-img-top preview-image" alt="${linkData.title}">
+                    <img src="${linkData.image || 'https://via.placeholder.com/300x200?text=Kein+Bild'}" class="card-img-top preview-image" alt="${linkData.title}">
                     <div class="card-body">
                         <h5 class="card-title">${linkData.title}</h5>
                         <p class="card-text">${linkData.link}</p>
@@ -168,23 +187,22 @@
 
             // Event Listener für Delete-Buttons
             document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', async function() {
                     const id = parseInt(this.getAttribute('data-id'));
                     if (confirm('Möchten Sie diese Karte wirklich löschen?')) {
-                        links = links.filter(link => link.id !== id);
-                        renderCards();
+                        try {
+                            await fetch(`/api/links/${id}`, { method: 'DELETE' });
+                            loadLinks();
+                        } catch (error) {
+                            alert('Fehler beim Löschen: ' + error.message);
+                        }
                     }
                 });
             });
         }
 
-        // Initial rendern (leer)
-        renderCards();
+        // Beim Laden der Seite Links laden
+        window.addEventListener('DOMContentLoaded', loadLinks);
     </script>
-    
-    <script>
-        loadLinks(); // lädt die gespeicherten Links beim Seitenstart
-    </script>
-
 </body>
 </html>

@@ -4,7 +4,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
 });
 
 async function loadLinks() {
-    const response = await fetch('/api/links', { ... });
+    const response = await fetch('/api/links');
     const links = await response.json();
 
     const container = document.getElementById('linkContainer');

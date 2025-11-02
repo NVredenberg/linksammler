@@ -28,6 +28,8 @@ db.serialize(() => {
 });
 
 // 4) Routen
+
+// Alle Links abrufen
 router.get('/links', (req, res) => {
   db.all("SELECT * FROM links", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -35,6 +37,7 @@ router.get('/links', (req, res) => {
   });
 });
 
+// Neuen Link erstellen
 router.post('/links', (req, res) => {
   const { title, link, image } = req.body;
   if (!title || !link) {
@@ -46,6 +49,18 @@ router.post('/links', (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
     });
+});
+
+// Link löschen
+router.delete('/links/:id', (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM links WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Link nicht gefunden' });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
 });
 
 module.exports = router;
