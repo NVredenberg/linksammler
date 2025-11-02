@@ -4,5 +4,5 @@ services:
   linksammler:
     build: .
     ports:
-      - "8080:80"
+      - "1810:80"
     restart: unless-stopp
