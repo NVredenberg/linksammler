@@ -1,27 +1,184 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Linksammler</title>
-  style.css
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Linksammler</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .preview-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background-color: #e9ecef;
+        }
+        .header-section {
+            margin-bottom: 30px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Linksammler</h1>
-  <section>
-    <h4>Neuen Link anlegen</h4>
-    <form>
-      <label for="title">Paket Titel</label>
-      <input type="text" id="title" name="title">
+    <div class="container-fluid">
+        <div class="header-section">
+            <h1>Linksammler</h1>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
+                Anlegen
+            </button>
+        </div>
 
-      <label for="link">Link</label>
-      <input type="url" id="link" name="link">
+        <div id="cardContainer" class="card-container"></div>
+    </div>
 
-      <label for="image">Vorschaubild</label>
-      <input type="url" id="image" name="image">
+    <!-- Modal zum Anlegen neuer Links -->
+    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">Neuen Link anlegen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="linkForm">
+                        <div class="mb-3">
+                            <label for="cardTitle" class="form-label">Paket Titel</label>
+                            <input type="text" class="form-control" id="cardTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardLink" class="form-label">Link</label>
+                            <input type="url" class="form-control" id="cardLink" placeholder="https://..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardImage" class="form-label">Vorschaubild</label>
+                            <input type="file" class="form-control" id="cardImage" accept="image/*" required>
+                            <div class="mt-2">
+                                <img id="imagePreview" src="" alt="Vorschau" style="max-width: 200px; display: none;">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary" id="saveBtn">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      <button type="submit">Speichern</button>
-      <button type="reset">Abbrechen</button>
-    </form>
-  </section>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script>
+        // Array zum Speichern der Links
+        let links = [];
+        let linkIdCounter = 0;
+
+        // Bildvorschau im Modal
+        document.getElementById('cardImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Speichern-Button
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            const title = document.getElementById('cardTitle').value;
+            const link = document.getElementById('cardLink').value;
+            const imageFile = document.getElementById('cardImage').files[0];
+
+            if (title && link && imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const linkData = {
+                        id: linkIdCounter++,
+                        title: title,
+                        link: link,
+                        image: event.target.result
+                    };
+                    
+                    links.push(linkData);
+                    renderCards();
+                    
+                    // Modal schließen und Form zurücksetzen
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+                    modal.hide();
+                    document.getElementById('linkForm').reset();
+                    document.getElementById('imagePreview').style.display = 'none';
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                alert('Bitte alle Felder ausfüllen!');
+            }
+        });
+
+        // Karten rendern
+        function renderCards() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+
+            links.forEach(linkData => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${linkData.image}" class="card-img-top preview-image" alt="${linkData.title}">
+                    <div class="card-body">
+                        <h5 class="card-title">${linkData.title}</h5>
+                        <p class="card-text">${linkData.link}</p>
+                        <button class="btn btn-primary copy-btn" data-link="${linkData.link}">Link kopieren</button>
+                        <button class="btn btn-danger delete-btn" data-id="${linkData.id}">Karte löschen</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Event Listener für Copy-Buttons
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const link = this.getAttribute('data-link');
+                    navigator.clipboard.writeText(link).then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'Kopiert!';
+                        this.classList.remove('btn-primary');
+                        this.classList.add('btn-success');
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.classList.remove('btn-success');
+                            this.classList.add('btn-primary');
+                        }, 2000);
+                    }).catch(err => {
+                        alert('Fehler beim Kopieren: ' + err);
+                    });
+                });
+            });
+
+            // Event Listener für Delete-Buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    if (confirm('Möchten Sie diese Karte wirklich löschen?')) {
+                        links = links.filter(link => link.id !== id);
+                        renderCards();
+                    }
+                });
+            });
+        }
+
+        // Initial rendern (leer)
+        renderCards();
+    </script>
 </body>
 </html>
