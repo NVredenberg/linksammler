@@ -17,3 +17,10 @@ button {
   font-size: 1em;
   cursor: pointer;
 }
+
+.link-card {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin-bottom: 1em;
+  background-color: #fff;
+}

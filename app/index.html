@@ -28,6 +28,7 @@
     </style>
 </head>
 <body>
+    <div id="linkContainer"></div>
     <div class="container-fluid">
         <div class="header-section">
             <h1>Linksammler</h1>
@@ -180,5 +181,10 @@
         // Initial rendern (leer)
         renderCards();
     </script>
+    
+    <script>
+        loadLinks(); // lädt die gespeicherten Links beim Seitenstart
+    </script>
+
 </body>
 </html>
