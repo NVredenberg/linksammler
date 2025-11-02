@@ -5,6 +5,16 @@ const router = express.Router();
 
 const db = new sqlite3.Database('./data/db.sqlite');
 
+const fs = require('fs');
+const path = require('path');
+
+// Stelle sicher, dass der Ordner existiert
+const dbPath = path.join(__dirname, 'data');
+if (!fs.existsSync(dbPath)) {
+  fs.mkdirSync(dbPath, { recursive: true });
+}
+
+
 db.serialize(() => {
   db.run("CREATE TABLE IF NOT EXISTS links (id INTEGER PRIMARY KEY, title TEXT, link TEXT, image TEXT)");
 });
