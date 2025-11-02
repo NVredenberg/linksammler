@@ -4,17 +4,18 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY server/package.json ./
-RUN npm install
+# Copy package.json and package-lock.json (falls vorhanden)
+COPY server/package*.json ./
 
-# Copy backend source code
+# Install dependencies
+RUN npm install
+# Copy rest of the backend code
 COPY server/ .
 
-# Ensure data directory exists for SQLite database
+# Ensure data directory exists
 RUN mkdir -p /app/data
 
-# Expose the backend port
+# Expose backend port
 EXPOSE 3000
 
 # Start the server

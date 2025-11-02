@@ -1,14 +1,19 @@
 version: '3'
 services:
-  frontend:
-    image: nginx:alpine
-    volumes:
-      - ./app:/usr/share/nginx/html
-    ports:
-      - "1810:80"
-    restart: unless-stopped
+  
+frontend:
+  image: nginx:alpine
+  volumes:
+    - ./app:/usr/share/nginx/html:ro
+    - ./app/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  ports:
+    - "1810:80"
+  depends_on:
+    - backend
+  restart: unless-stopped
 
-  backend:
+
+backend:
     build:
       context: .
       dockerfile: Dockerfile
