@@ -1,24 +1,33 @@
-
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const router = express.Router();
-
-const db = new sqlite3.Database('./data/db.sqlite');
-
 const fs = require('fs');
 const path = require('path');
 
-// Stelle sicher, dass der Ordner existiert
-const dbPath = path.join(__dirname, 'data');
-if (!fs.existsSync(dbPath)) {
-  fs.mkdirSync(dbPath, { recursive: true });
+const router = express.Router();
+
+// 1) Datenverzeichnis sicherstellen (absolut zu dieser Datei)
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
 }
 
-
-db.serialize(() => {
-  db.run("CREATE TABLE IF NOT EXISTS links (id INTEGER PRIMARY KEY, title TEXT, link TEXT, image TEXT)");
+// 2) DB-Datei absolut referenzieren
+const dbFile = path.join(dataDir, 'db.sqlite');
+const db = new sqlite3.Database(dbFile, (err) => {
+  if (err) {
+    console.error('SQLite open error:', err.message);
+  } else {
+    console.log('SQLite geöffnet:', dbFile);
+  }
 });
 
+// 3) Schema anlegen (optional: WAL für Stabilität)
+db.serialize(() => {
+  db.run("PRAGMA journal_mode=WAL;");
+  db.run("CREATE TABLE IF NOT EXISTS links (id INTEGER PRIMARY KEY, title TEXT NOT NULL, link TEXT NOT NULL, image TEXT)");
+});
+
+// 4) Routen
 router.get('/links', (req, res) => {
   db.all("SELECT * FROM links", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -28,10 +37,15 @@ router.get('/links', (req, res) => {
 
 router.post('/links', (req, res) => {
   const { title, link, image } = req.body;
-  db.run("INSERT INTO links (title, link, image) VALUES (?, ?, ?)", [title, link, image], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID });
-  });
+  if (!title || !link) {
+    return res.status(400).json({ error: 'title und link sind erforderlich' });
+  }
+  db.run("INSERT INTO links (title, link, image) VALUES (?, ?, ?)",
+    [title, link, image || null],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID });
+    });
 });
 
 module.exports = router;

@@ -4,7 +4,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
 });
 
 async function loadLinks() {
-    const response = await fetch('http://192.168.178.100:3000/api/links');
+    const response = await fetch('/api/links', { ... });
     const links = await response.json();
 
     const container = document.getElementById('linkContainer');
@@ -29,7 +29,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     const link = document.getElementById('link').value;
     const image = document.getElementById('image').value;
 
-    await fetch('http://192.168.178.100:3000/api/links', {
+    await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, link, image })
