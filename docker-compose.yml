@@ -10,11 +10,12 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - ./server:/app
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
+  build:
+    context: .
+    dockerfile: Dockerfile
+  volumes:
+    - ./server:/app
+    - ./data:/app/data  # <– SQLite-Datei wird hier gespeichert
+  ports:
+    - "3000:3000"
+  restart: unless-stopped
