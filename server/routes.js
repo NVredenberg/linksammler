@@ -2,16 +2,17 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
+const { requireAuth } = require('./auth');
 
 const router = express.Router();
 
-// 1) Datenverzeichnis sicherstellen (absolut zu dieser Datei)
+// Datenverzeichnis sicherstellen
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// 2) DB-Datei absolut referenzieren
+// DB-Datei absolut referenzieren
 const dbFile = path.join(dataDir, 'db.sqlite');
 const db = new sqlite3.Database(dbFile, (err) => {
   if (err) {
@@ -21,24 +22,22 @@ const db = new sqlite3.Database(dbFile, (err) => {
   }
 });
 
-// 3) Schema anlegen (optional: WAL für Stabilität)
+// Schema anlegen
 db.serialize(() => {
   db.run("PRAGMA journal_mode=WAL;");
   db.run("CREATE TABLE IF NOT EXISTS links (id INTEGER PRIMARY KEY, title TEXT NOT NULL, link TEXT NOT NULL, image TEXT)");
 });
 
-// 4) Routen
-
-// Alle Links abrufen
-router.get('/links', (req, res) => {
+// Alle Links abrufen (geschützt)
+router.get('/links', requireAuth, (req, res) => {
   db.all("SELECT * FROM links", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
-// Neuen Link erstellen
-router.post('/links', (req, res) => {
+// Neuen Link erstellen (geschützt)
+router.post('/links', requireAuth, (req, res) => {
   const { title, link, image } = req.body;
   if (!title || !link) {
     return res.status(400).json({ error: 'title und link sind erforderlich' });
@@ -51,8 +50,8 @@ router.post('/links', (req, res) => {
     });
 });
 
-// Link löschen
-router.delete('/links/:id', (req, res) => {
+// Link löschen (geschützt)
+router.delete('/links/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   db.run("DELETE FROM links WHERE id = ?", [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });

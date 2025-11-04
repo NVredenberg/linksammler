@@ -24,16 +24,80 @@
         }
         .header-section {
             margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            max-width: 400px;
+            width: 100%;
+        }
+        #appContent {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <!-- Login/Setup Screen -->
+    <div id="authScreen" class="login-container">
+        <div class="login-card">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Linksammler</h3>
+                    
+                    <!-- Setup Form (wird angezeigt wenn kein Passwort gesetzt) -->
+                    <div id="setupForm" style="display: none;">
+                        <p class="text-muted">Bitte setze ein Passwort für den Zugriff auf die Anwendung.</p>
+                        <form id="setupPasswordForm">
+                            <div class="mb-3">
+                                <label for="setupPassword" class="form-label">Passwort (min. 6 Zeichen)</label>
+                                <input type="password" class="form-control" id="setupPassword" required minlength="6">
+                            </div>
+                            <div class="mb-3">
+                                <label for="setupPasswordConfirm" class="form-label">Passwort bestätigen</label>
+                                <input type="password" class="form-control" id="setupPasswordConfirm" required minlength="6">
+                            </div>
+                            <div id="setupError" class="alert alert-danger" style="display: none;"></div>
+                            <button type="submit" class="btn btn-primary w-100">Passwort setzen</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div id="loginForm" style="display: none;">
+                        <form id="loginPasswordForm">
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Passwort</label>
+                                <input type="password" class="form-control" id="loginPassword" required autofocus>
+                            </div>
+                            <div id="loginError" class="alert alert-danger" style="display: none;"></div>
+                            <button type="submit" class="btn btn-primary w-100">Anmelden</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appContent" class="container-fluid">
         <div class="header-section">
-            <h1>Linksammler</h1>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
-                Anlegen
-            </button>
+            <div>
+                <h1>Linksammler</h1>
+            </div>
+            <div>
+                <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#createModal">
+                    Anlegen
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="logoutBtn">
+                    Abmelden
+                </button>
+            </div>
         </div>
 
         <div id="cardContainer" class="card-container"></div>
@@ -74,8 +138,127 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz4YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script>
+        // Auth Status prüfen
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/status', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    showApp();
+                } else if (data.passwordSet) {
+                    showLogin();
+                } else {
+                    showSetup();
+                }
+            } catch (error) {
+                console.error('Auth Status Error:', error);
+                showLogin();
+            }
+        }
+
+        function showSetup() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('setupForm').style.display = 'block';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('appContent').style.display = 'none';
+        }
+
+        function showLogin() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('setupForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('appContent').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            loadLinks();
+        }
+
+        // Setup Form Handler
+        document.getElementById('setupPasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('setupPassword').value;
+            const confirm = document.getElementById('setupPasswordConfirm').value;
+            const errorDiv = document.getElementById('setupError');
+            
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwörter stimmen nicht überein';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApp();
+                } else {
+                    errorDiv.textContent = data.error;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Fehler: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Login Form Handler
+        document.getElementById('loginPasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApp();
+                } else {
+                    errorDiv.textContent = data.error;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Fehler: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Logout Handler
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                showLogin();
+            } catch (error) {
+                console.error('Logout Error:', error);
+            }
+        });
+
         // Bildvorschau im Modal
         document.getElementById('cardImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -90,7 +273,7 @@
             }
         });
 
-        // Hilfsfunktion: Bild komprimieren
+        // Bild komprimieren
         function compressImage(file, maxWidth = 800, quality = 0.8) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -101,7 +284,6 @@
                         let width = img.width;
                         let height = img.height;
                         
-                        // Proportional skalieren
                         if (width > maxWidth) {
                             height = (height * maxWidth) / width;
                             width = maxWidth;
@@ -113,7 +295,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Als JPEG mit Qualität komprimieren
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
                     img.src = e.target.result;
@@ -122,7 +303,7 @@
             });
         }
 
-        // Speichern-Button - sendet Daten an Backend
+        // Speichern-Button
         document.getElementById('saveBtn').addEventListener('click', async function() {
             const title = document.getElementById('cardTitle').value;
             const link = document.getElementById('cardLink').value;
@@ -130,13 +311,12 @@
 
             if (title && link && imageFile) {
                 try {
-                    // Bild komprimieren
                     const compressedImage = await compressImage(imageFile);
                     
-                    // An Backend API senden
                     const response = await fetch('/api/links', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
                         body: JSON.stringify({
                             title: title,
                             link: link,
@@ -144,14 +324,17 @@
                         })
                     });
 
+                    if (response.status === 401) {
+                        alert('Session abgelaufen. Bitte neu anmelden.');
+                        showLogin();
+                        return;
+                    }
+
                     if (response.ok) {
-                        // Modal schließen und Form zurücksetzen
                         const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
                         modal.hide();
                         document.getElementById('linkForm').reset();
                         document.getElementById('imagePreview').style.display = 'none';
-                        
-                        // Karten neu laden
                         loadLinks();
                     } else {
                         alert('Fehler beim Speichern!');
@@ -168,7 +351,15 @@
         // Links vom Backend laden
         async function loadLinks() {
             try {
-                const response = await fetch('/api/links');
+                const response = await fetch('/api/links', {
+                    credentials: 'include'
+                });
+                
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
+                
                 const links = await response.json();
                 renderCards(links);
             } catch (error) {
@@ -196,36 +387,27 @@
                 container.appendChild(card);
             });
 
-            // Event Listener für Copy-Buttons
+            // Copy-Button Handler
             document.querySelectorAll('.copy-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const link = this.getAttribute('data-link');
                     
-                    // Fallback-Methode für Browser ohne Clipboard API Unterstützung
                     const copyToClipboard = (text) => {
-                        // Methode 1: Moderne Clipboard API
                         if (navigator.clipboard && window.isSecureContext) {
                             return navigator.clipboard.writeText(text);
                         } else {
-                            // Methode 2: Fallback mit temporärem Textarea
                             const textArea = document.createElement('textarea');
                             textArea.value = text;
                             textArea.style.position = 'fixed';
                             textArea.style.left = '-999999px';
-                            textArea.style.top = '-999999px';
                             document.body.appendChild(textArea);
-                            textArea.focus();
                             textArea.select();
                             
                             return new Promise((resolve, reject) => {
                                 try {
                                     const successful = document.execCommand('copy');
                                     textArea.remove();
-                                    if (successful) {
-                                        resolve();
-                                    } else {
-                                        reject(new Error('execCommand failed'));
-                                    }
+                                    successful ? resolve() : reject(new Error('execCommand failed'));
                                 } catch (err) {
                                     textArea.remove();
                                     reject(err);
@@ -251,13 +433,23 @@
                 });
             });
 
-            // Event Listener für Delete-Buttons
+            // Delete-Button Handler
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const id = parseInt(this.getAttribute('data-id'));
                     if (confirm('Möchten Sie diese Karte wirklich löschen?')) {
                         try {
-                            await fetch(`/api/links/${id}`, { method: 'DELETE' });
+                            const response = await fetch(`/api/links/${id}`, { 
+                                method: 'DELETE',
+                                credentials: 'include'
+                            });
+                            
+                            if (response.status === 401) {
+                                alert('Session abgelaufen. Bitte neu anmelden.');
+                                showLogin();
+                                return;
+                            }
+                            
                             loadLinks();
                         } catch (error) {
                             alert('Fehler beim Löschen: ' + error.message);
@@ -267,8 +459,8 @@
             });
         }
 
-        // Beim Laden der Seite Links laden
-        window.addEventListener('DOMContentLoaded', loadLinks);
+        // Beim Laden der Seite Auth-Status prüfen
+        window.addEventListener('DOMContentLoaded', checkAuthStatus);
     </script>
 </body>
 </html>
