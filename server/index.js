@@ -6,22 +6,23 @@ const authRoutes = require('./authRoutes');
 
 const app = express();
 
+// Session-Middleware MUSS vor CORS kommen
+app.use(session({
+  secret: 'linksammler-secret-change-this-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax'
+  }
+}));
+
 // CORS konfigurieren
 app.use(cors({
   origin: true,
   credentials: true
-}));
-
-// Session-Middleware
-app.use(session({
-  secret: 'linksammler-secret-' + Math.random().toString(36),
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Bei HTTPS auf true setzen
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 Stunden
-  }
 }));
 
 // Body-Parser mit erhöhtem Limit
