@@ -91,7 +91,7 @@
                 <h1>Linksammler</h1>
             </div>
             <div>
-                <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#createModal">
+                <button type="button" class="btn btn-success me-2" id="openCreateModalBtn">
                     Anlegen
                 </button>
                 <button type="button" class="btn btn-outline-secondary" id="logoutBtn">
@@ -140,6 +140,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz4YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script>
+        // Bootstrap Modal initialisieren
+        let createModal;
+        
         // Auth Status prüfen
         async function checkAuthStatus() {
             try {
@@ -178,6 +181,12 @@
         function showApp() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
+            
+            // Modal initialisieren wenn App angezeigt wird
+            if (!createModal) {
+                createModal = new bootstrap.Modal(document.getElementById('createModal'));
+            }
+            
             loadLinks();
         }
 
@@ -259,6 +268,18 @@
             }
         });
 
+        // Modal öffnen Button
+        document.getElementById('openCreateModalBtn').addEventListener('click', function() {
+            console.log('Anlegen Button geklickt');
+            if (createModal) {
+                createModal.show();
+            } else {
+                console.error('Modal nicht initialisiert');
+                createModal = new bootstrap.Modal(document.getElementById('createModal'));
+                createModal.show();
+            }
+        });
+
         // Bildvorschau im Modal
         document.getElementById('cardImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -331,8 +352,7 @@
                     }
 
                     if (response.ok) {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
-                        modal.hide();
+                        createModal.hide();
                         document.getElementById('linkForm').reset();
                         document.getElementById('imagePreview').style.display = 'none';
                         loadLinks();
