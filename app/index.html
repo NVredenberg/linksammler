@@ -187,6 +187,22 @@
                 createModal = new bootstrap.Modal(document.getElementById('createModal'));
             }
             
+            // Event Listener für Anlegen-Button HIER registrieren (nachdem Button sichtbar ist)
+            const openBtn = document.getElementById('openCreateModalBtn');
+            if (openBtn && !openBtn.hasAttribute('data-listener-added')) {
+                openBtn.setAttribute('data-listener-added', 'true');
+                openBtn.addEventListener('click', function() {
+                    console.log('Anlegen Button geklickt');
+                    if (createModal) {
+                        createModal.show();
+                    } else {
+                        console.error('Modal nicht initialisiert');
+                        createModal = new bootstrap.Modal(document.getElementById('createModal'));
+                        createModal.show();
+                    }
+                });
+            }
+            
             loadLinks();
         }
 
@@ -268,17 +284,7 @@
             }
         });
 
-        // Modal öffnen Button
-        document.getElementById('openCreateModalBtn').addEventListener('click', function() {
-            console.log('Anlegen Button geklickt');
-            if (createModal) {
-                createModal.show();
-            } else {
-                console.error('Modal nicht initialisiert');
-                createModal = new bootstrap.Modal(document.getElementById('createModal'));
-                createModal.show();
-            }
-        });
+        // Modal öffnen Button - Event Listener wird jetzt in showApp() registriert
 
         // Bildvorschau im Modal
         document.getElementById('cardImage').addEventListener('change', function(e) {
