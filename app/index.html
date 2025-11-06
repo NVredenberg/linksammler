@@ -22,6 +22,15 @@
             object-fit: cover;
             background-color: #e9ecef;
         }
+        .text-preview {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
         .header-section {
             margin-bottom: 30px;
             display: flex;
@@ -41,6 +50,12 @@
         #appContent {
             display: none;
         }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .text-card {
+            border-left: 4px solid #0d6efd;
+        }
     </style>
 </head>
 <body>
@@ -51,7 +66,6 @@
                 <div class="card-body">
                     <h3 class="card-title text-center mb-4">Linksammler</h3>
                     
-                    <!-- Setup Form (wird angezeigt wenn kein Passwort gesetzt) -->
                     <div id="setupForm" style="display: none;">
                         <p class="text-muted">Bitte setze ein Passwort für den Zugriff auf die Anwendung.</p>
                         <form id="setupPasswordForm">
@@ -68,7 +82,6 @@
                         </form>
                     </div>
                     
-                    <!-- Login Form -->
                     <div id="loginForm" style="display: none;">
                         <form id="loginPasswordForm">
                             <div class="mb-3">
@@ -91,8 +104,11 @@
                 <h1>Linksammler</h1>
             </div>
             <div>
-                <button type="button" class="btn btn-success me-2" id="openCreateModalBtn">
-                    Anlegen
+                <button type="button" class="btn btn-success me-2" id="openCreateLinkModalBtn">
+                    Link anlegen
+                </button>
+                <button type="button" class="btn btn-info me-2" id="openCreateTextModalBtn">
+                    Text anlegen
                 </button>
                 <button type="button" class="btn btn-outline-secondary" id="logoutBtn">
                     Abmelden
@@ -100,16 +116,37 @@
             </div>
         </div>
 
-        <div id="cardContainer" class="card-container"></div>
+        <!-- Tabs für Links und Texte -->
+        <ul class="nav nav-tabs" id="contentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="links-tab" data-bs-toggle="tab" data-bs-target="#links-content" type="button">
+                    Links
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="texts-tab" data-bs-toggle="tab" data-bs-target="#texts-content" type="button">
+                    Texte
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="contentTabsContent">
+            <div class="tab-pane fade show active" id="links-content">
+                <div id="cardContainer" class="card-container"></div>
+            </div>
+            <div class="tab-pane fade" id="texts-content">
+                <div id="textContainer" class="card-container"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal zum Anlegen neuer Links -->
-    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal fade" id="createLinkModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="createModalLabel">Neuen Link anlegen</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">Neuen Link anlegen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="linkForm">
@@ -132,26 +169,50 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="button" class="btn btn-primary" id="saveBtn">Speichern</button>
+                    <button type="button" class="btn btn-primary" id="saveLinkBtn">Speichern</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Modal zum Anlegen neuer Texte -->
+    <div class="modal fade" id="createTextModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Neuen Text anlegen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="textForm">
+                        <div class="mb-3">
+                            <label for="textTitle" class="form-label">Überschrift</label>
+                            <input type="text" class="form-control" id="textTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="textContent" class="form-label">Text</label>
+                            <textarea class="form-control" id="textContent" rows="10" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary" id="saveTextBtn">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Application JS -->
     <script>
-        // Bootstrap Modal initialisieren
-        let createModal;
+        let createLinkModal;
+        let createTextModal;
         
         // Auth Status prüfen
         async function checkAuthStatus() {
             try {
-                const response = await fetch('/api/auth/status', {
-                    credentials: 'include'
-                });
+                const response = await fetch('/api/auth/status', { credentials: 'include' });
                 const data = await response.json();
                 
                 if (data.authenticated) {
@@ -185,19 +246,18 @@
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
             
-            // Modal initialisieren
-            if (!createModal) {
-                const modalElement = document.getElementById('createModal');
-                createModal = new bootstrap.Modal(modalElement);
+            if (!createLinkModal) {
+                createLinkModal = new bootstrap.Modal(document.getElementById('createLinkModal'));
+                createTextModal = new bootstrap.Modal(document.getElementById('createTextModal'));
             }
             
             loadLinks();
+            loadTexts();
         }
 
         // Setup Form Handler
         document.getElementById('setupPasswordForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const password = document.getElementById('setupPassword').value;
             const confirm = document.getElementById('setupPasswordConfirm').value;
             const errorDiv = document.getElementById('setupError');
@@ -216,11 +276,10 @@
                     body: JSON.stringify({ password })
                 });
                 
-                const data = await response.json();
-                
                 if (response.ok) {
                     showApp();
                 } else {
+                    const data = await response.json();
                     errorDiv.textContent = data.error;
                     errorDiv.style.display = 'block';
                 }
@@ -233,7 +292,6 @@
         // Login Form Handler
         document.getElementById('loginPasswordForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             
@@ -245,11 +303,10 @@
                     body: JSON.stringify({ password })
                 });
                 
-                const data = await response.json();
-                
                 if (response.ok) {
                     showApp();
                 } else {
+                    const data = await response.json();
                     errorDiv.textContent = data.error;
                     errorDiv.style.display = 'block';
                 }
@@ -262,24 +319,18 @@
         // Logout Handler
         document.getElementById('logoutBtn').addEventListener('click', async function() {
             try {
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    credentials: 'include'
-                });
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                 showLogin();
             } catch (error) {
                 console.error('Logout Error:', error);
             }
         });
 
-        // Anlegen-Button Handler
-        document.getElementById('openCreateModalBtn').addEventListener('click', function() {
-            if (createModal) {
-                createModal.show();
-            }
-        });
+        // Modal Buttons
+        document.getElementById('openCreateLinkModalBtn').addEventListener('click', () => createLinkModal.show());
+        document.getElementById('openCreateTextModalBtn').addEventListener('click', () => createTextModal.show());
 
-        // Bildvorschau im Modal
+        // Bildvorschau
         document.getElementById('cardImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -311,10 +362,8 @@
                         
                         canvas.width = width;
                         canvas.height = height;
-                        
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
                     img.src = e.target.result;
@@ -323,8 +372,8 @@
             });
         }
 
-        // Speichern-Button
-        document.getElementById('saveBtn').addEventListener('click', async function() {
+        // Link speichern
+        document.getElementById('saveLinkBtn').addEventListener('click', async function() {
             const title = document.getElementById('cardTitle').value;
             const link = document.getElementById('cardLink').value;
             const imageFile = document.getElementById('cardImage').files[0];
@@ -332,16 +381,11 @@
             if (title && link && imageFile) {
                 try {
                     const compressedImage = await compressImage(imageFile);
-                    
                     const response = await fetch('/api/links', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({
-                            title: title,
-                            link: link,
-                            image: compressedImage
-                        })
+                        body: JSON.stringify({ title, link, image: compressedImage })
                     });
 
                     if (response.status === 401) {
@@ -351,7 +395,7 @@
                     }
 
                     if (response.ok) {
-                        createModal.hide();
+                        createLinkModal.hide();
                         document.getElementById('linkForm').reset();
                         document.getElementById('imagePreview').style.display = 'none';
                         loadLinks();
@@ -360,25 +404,94 @@
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('Fehler beim Speichern: ' + error.message);
+                    alert('Fehler: ' + error.message);
                 }
             } else {
                 alert('Bitte alle Felder ausfüllen!');
             }
         });
 
-        // Links vom Backend laden
+        // Text speichern
+        document.getElementById('saveTextBtn').addEventListener('click', async function() {
+            const title = document.getElementById('textTitle').value;
+            const content = document.getElementById('textContent').value;
+
+            if (title && content) {
+                try {
+                    const response = await fetch('/api/texts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ title, content })
+                    });
+
+                    if (response.status === 401) {
+                        alert('Session abgelaufen. Bitte neu anmelden.');
+                        showLogin();
+                        return;
+                    }
+
+                    if (response.ok) {
+                        createTextModal.hide();
+                        document.getElementById('textForm').reset();
+                        loadTexts();
+                    } else {
+                        alert('Fehler beim Speichern!');
+                    }
+                } catch (error) {
+                    alert('Fehler: ' + error.message);
+                }
+            } else {
+                alert('Bitte alle Felder ausfüllen!');
+            }
+        });
+
+        // Kopier-Funktion
+        function copyToClipboard(text, button) {
+            const copy = (txt) => {
+                if (navigator.clipboard && window.isSecureContext) {
+                    return navigator.clipboard.writeText(txt);
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = txt;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    return new Promise((resolve, reject) => {
+                        try {
+                            document.execCommand('copy') ? resolve() : reject();
+                            textArea.remove();
+                        } catch (err) {
+                            textArea.remove();
+                            reject(err);
+                        }
+                    });
+                }
+            };
+            
+            copy(text).then(() => {
+                const originalText = button.textContent;
+                const originalClass = button.className;
+                button.textContent = 'Kopiert!';
+                button.className = button.className.replace('btn-primary', 'btn-success').replace('btn-info', 'btn-success');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.className = originalClass;
+                }, 2000);
+            }).catch(err => {
+                alert('Fehler beim Kopieren: ' + err.message);
+            });
+        }
+
+        // Links laden
         async function loadLinks() {
             try {
-                const response = await fetch('/api/links', {
-                    credentials: 'include'
-                });
-                
+                const response = await fetch('/api/links', { credentials: 'include' });
                 if (response.status === 401) {
                     showLogin();
                     return;
                 }
-                
                 const links = await response.json();
                 renderCards(links);
             } catch (error) {
@@ -386,7 +499,22 @@
             }
         }
 
-        // Karten rendern
+        // Texte laden
+        async function loadTexts() {
+            try {
+                const response = await fetch('/api/texts', { credentials: 'include' });
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
+                const texts = await response.json();
+                renderTexts(texts);
+            } catch (error) {
+                console.error('Error loading texts:', error);
+            }
+        }
+
+        // Links rendern
         function renderCards(links) {
             const container = document.getElementById('cardContainer');
             container.innerHTML = '';
@@ -398,87 +526,93 @@
                     <img src="${linkData.image || 'https://via.placeholder.com/300x200?text=Kein+Bild'}" class="card-img-top preview-image" alt="${linkData.title}">
                     <div class="card-body">
                         <h5 class="card-title">${linkData.title}</h5>
-                        <p class="card-text">${linkData.link}</p>
-                        <button class="btn btn-primary copy-btn" data-link="${linkData.link}">Link kopieren</button>
-                        <button class="btn btn-danger delete-btn" data-id="${linkData.id}">Karte löschen</button>
+                        <p class="card-text small text-muted">${linkData.link}</p>
+                        <button class="btn btn-primary btn-sm copy-link-btn" data-link="${linkData.link}">Link kopieren</button>
+                        <button class="btn btn-danger btn-sm delete-link-btn" data-id="${linkData.id}">Löschen</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
 
-            // Copy-Button Handler
-            document.querySelectorAll('.copy-btn').forEach(btn => {
+            document.querySelectorAll('.copy-link-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const link = this.getAttribute('data-link');
-                    
-                    const copyToClipboard = (text) => {
-                        if (navigator.clipboard && window.isSecureContext) {
-                            return navigator.clipboard.writeText(text);
-                        } else {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = text;
-                            textArea.style.position = 'fixed';
-                            textArea.style.left = '-999999px';
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            
-                            return new Promise((resolve, reject) => {
-                                try {
-                                    const successful = document.execCommand('copy');
-                                    textArea.remove();
-                                    successful ? resolve() : reject(new Error('execCommand failed'));
-                                } catch (err) {
-                                    textArea.remove();
-                                    reject(err);
-                                }
-                            });
-                        }
-                    };
-                    
-                    copyToClipboard(link).then(() => {
-                        const originalText = this.textContent;
-                        this.textContent = 'Kopiert!';
-                        this.classList.remove('btn-primary');
-                        this.classList.add('btn-success');
-                        setTimeout(() => {
-                            this.textContent = originalText;
-                            this.classList.remove('btn-success');
-                            this.classList.add('btn-primary');
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Fehler beim Kopieren:', err);
-                        alert('Fehler beim Kopieren: ' + err.message);
-                    });
+                    copyToClipboard(this.getAttribute('data-link'), this);
                 });
             });
 
-            // Delete-Button Handler
-            document.querySelectorAll('.delete-btn').forEach(btn => {
+            document.querySelectorAll('.delete-link-btn').forEach(btn => {
                 btn.addEventListener('click', async function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    if (confirm('Möchten Sie diese Karte wirklich löschen?')) {
+                    if (confirm('Möchten Sie diesen Link wirklich löschen?')) {
+                        const id = this.getAttribute('data-id');
                         try {
                             const response = await fetch(`/api/links/${id}`, { 
                                 method: 'DELETE',
                                 credentials: 'include'
                             });
-                            
                             if (response.status === 401) {
-                                alert('Session abgelaufen. Bitte neu anmelden.');
+                                alert('Session abgelaufen.');
                                 showLogin();
-                                return;
+                            } else {
+                                loadLinks();
                             }
-                            
-                            loadLinks();
                         } catch (error) {
-                            alert('Fehler beim Löschen: ' + error.message);
+                            alert('Fehler: ' + error.message);
                         }
                     }
                 });
             });
         }
 
-        // Beim Laden der Seite Auth-Status prüfen
+        // Texte rendern
+        function renderTexts(texts) {
+            const container = document.getElementById('textContainer');
+            container.innerHTML = '';
+
+            texts.forEach(textData => {
+                const card = document.createElement('div');
+                card.className = 'card text-card';
+                card.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">${textData.title}</h5>
+                        <div class="text-preview">${textData.content}</div>
+                        <div class="mt-3">
+                            <button class="btn btn-info btn-sm copy-text-btn" data-content="${textData.content.replace(/"/g, '&quot;')}">Text kopieren</button>
+                            <button class="btn btn-danger btn-sm delete-text-btn" data-id="${textData.id}">Löschen</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.querySelectorAll('.copy-text-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    copyToClipboard(this.getAttribute('data-content'), this);
+                });
+            });
+
+            document.querySelectorAll('.delete-text-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    if (confirm('Möchten Sie diesen Text wirklich löschen?')) {
+                        const id = this.getAttribute('data-id');
+                        try {
+                            const response = await fetch(`/api/texts/${id}`, { 
+                                method: 'DELETE',
+                                credentials: 'include'
+                            });
+                            if (response.status === 401) {
+                                alert('Session abgelaufen.');
+                                showLogin();
+                            } else {
+                                loadTexts();
+                            }
+                        } catch (error) {
+                            alert('Fehler: ' + error.message);
+                        }
+                    }
+                });
+            });
+        }
+
         window.addEventListener('DOMContentLoaded', checkAuthStatus);
     </script>
 </body>

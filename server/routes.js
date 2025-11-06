@@ -26,7 +26,11 @@ const db = new sqlite3.Database(dbFile, (err) => {
 db.serialize(() => {
   db.run("PRAGMA journal_mode=WAL;");
   db.run("CREATE TABLE IF NOT EXISTS links (id INTEGER PRIMARY KEY, title TEXT NOT NULL, link TEXT NOT NULL, image TEXT)");
+  // Neue Tabelle für Texte
+  db.run("CREATE TABLE IF NOT EXISTS texts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
 });
+
+// === LINKS ROUTEN ===
 
 // Alle Links abrufen (geschützt)
 router.get('/links', requireAuth, (req, res) => {
@@ -57,6 +61,42 @@ router.delete('/links/:id', requireAuth, (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) {
       return res.status(404).json({ error: 'Link nicht gefunden' });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// === TEXTE ROUTEN ===
+
+// Alle Texte abrufen (geschützt)
+router.get('/texts', requireAuth, (req, res) => {
+  db.all("SELECT * FROM texts ORDER BY created_at DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Neuen Text erstellen (geschützt)
+router.post('/texts', requireAuth, (req, res) => {
+  const { title, content } = req.body;
+  if (!title || !content) {
+    return res.status(400).json({ error: 'title und content sind erforderlich' });
+  }
+  db.run("INSERT INTO texts (title, content) VALUES (?, ?)",
+    [title, content],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID });
+    });
+});
+
+// Text löschen (geschützt)
+router.delete('/texts/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM texts WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Text nicht gefunden' });
     }
     res.json({ success: true, deleted: this.changes });
   });
