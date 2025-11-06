@@ -137,7 +137,12 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous">
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz4YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    
+    <!-- Application JS -->
+    <script>
         // Bootstrap Modal initialisieren
         let createModal;
         
@@ -180,31 +185,10 @@
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
             
-            // Warte bis Bootstrap definitiv geladen ist
-            if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap ist nicht geladen!');
-                return;
-            }
-            
-            // Modal initialisieren wenn App angezeigt wird
+            // Modal initialisieren
             if (!createModal) {
-                createModal = new bootstrap.Modal(document.getElementById('createModal'));
-            }
-            
-            // Event Listener für Anlegen-Button HIER registrieren (nachdem Button sichtbar ist)
-            const openBtn = document.getElementById('openCreateModalBtn');
-            if (openBtn && !openBtn.hasAttribute('data-listener-added')) {
-                openBtn.setAttribute('data-listener-added', 'true');
-                openBtn.addEventListener('click', function() {
-                    console.log('Anlegen Button geklickt');
-                    if (createModal) {
-                        createModal.show();
-                    } else {
-                        console.error('Modal nicht initialisiert');
-                        createModal = new bootstrap.Modal(document.getElementById('createModal'));
-                        createModal.show();
-                    }
-                });
+                const modalElement = document.getElementById('createModal');
+                createModal = new bootstrap.Modal(modalElement);
             }
             
             loadLinks();
@@ -285,6 +269,13 @@
                 showLogin();
             } catch (error) {
                 console.error('Logout Error:', error);
+            }
+        });
+
+        // Anlegen-Button Handler
+        document.getElementById('openCreateModalBtn').addEventListener('click', function() {
+            if (createModal) {
+                createModal.show();
             }
         });
 
